@@ -101,7 +101,7 @@ async function checkImages() {
       const faces = data.FaceMatches;
       if (faces.some(face => {
         if(face.Similarity > 85) {
-          console.log("Face match above 85% similarity.");
+          console.log(`Face match with ${face.Similarity}% similarity.`);
           return true;
         }
       })) {
@@ -109,7 +109,7 @@ async function checkImages() {
         validFaceMatch = true;
       }
       else {
-        console.log("No match detected");
+        console.log("No match detected above 85%");
       }
     });
   }
