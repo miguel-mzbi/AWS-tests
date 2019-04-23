@@ -105,3 +105,4 @@ typings/
 
 .env
 rekognition/rekognition/*
+rekognition/input/*
