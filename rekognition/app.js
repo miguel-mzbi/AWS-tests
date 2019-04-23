@@ -14,16 +14,18 @@ const selfie2 = 'selfie2.jpg';
 const passport = 'passport.jpg';
 const ineF = 'ineF.jpg';
 const ineR = 'ineR.jpg';
+const ineF2 = 'ineF2.jpg';
 
 const selfie1_BM = fs.readFileSync(`./input/${selfie1}`);
 const selfie2_BM = fs.readFileSync(`./input/${selfie2}`);
 const ineF_BM = fs.readFileSync(`./input/${ineF}`);
+const ineF2_BM = fs.readFileSync(`./input/${ineF2}`);
 const ineR_BM = fs.readFileSync(`./input/${ineR}`);
 const passport_BM = fs.readFileSync(`./input/${passport}`);
 
 // Select photos to use
 const selfieBM = selfie1_BM;
-const identificationBM = ineF_BM;
+const identificationBM = ineF2_BM;
 // Build payloads. Payload can contain photo location in an S3 bucket.
 let selfieJSON = {
   Image: {
@@ -59,11 +61,11 @@ async function checkImages() {
   await checkId.then(data => {
     const labels = data.Labels;
     if (labels.some(label => {
-      if (label.Name == "Passport" && label.Confidence > 85) {
+      if (label.Name == "Passport" && label.Confidence > 75) {
         console.log("Most likely a passport.");
         return true;
       }
-      else if (label.Name == "Id Cards" && label.Confidence > 85) {
+      else if (label.Name == "Id Cards" && label.Confidence > 75) {
         console.log("Most likely an ID card.");
         return true;
       }
@@ -81,7 +83,7 @@ async function checkImages() {
   await checkSelfie.then(data => {    
     const faces = data.FaceDetails;
     if (faces.some(face => {
-      if (face.Confidence > 85) {
+      if (face.Confidence > 75) {
         console.log("Most likely contains a face.");
         return true;
       }
@@ -100,7 +102,7 @@ async function checkImages() {
     await checkFaceMatch.then(data => {
       const faces = data.FaceMatches;
       if (faces.some(face => {
-        if(face.Similarity > 85) {
+        if(face.Similarity > 75) {
           console.log(`Face match with ${face.Similarity}% similarity.`);
           return true;
         }
@@ -109,7 +111,7 @@ async function checkImages() {
         validFaceMatch = true;
       }
       else {
-        console.log("No match detected above 85%");
+        console.log("No match detected above 75%");
       }
     });
   }
@@ -136,6 +138,31 @@ async function checkImages() {
       })) {
         if(idType == "INE") {
           console.log("Found INE.");
+          const nameHeaderComponent = textDetections.find(text => {
+            return stringSimilarity.compareTwoStrings(text.DetectedText.toLowerCase(), 'nombre') >= 0.8
+          })
+          const firstSurnameAndBirthID = nameHeaderComponent.ParentId+1;
+          const secondSurnameAndSexID = nameHeaderComponent.ParentId+2;
+          const nameID = nameHeaderComponent.ParentId+4;
+
+          const firstSurnameAndBirthComponent = textDetections[firstSurnameAndBirthID];
+          const secondSurnameAndSexComponent = textDetections[secondSurnameAndSexID];
+          const nameComponent = textDetections[nameID];
+
+          const firstSurnameAndBirthArray = firstSurnameAndBirthComponent.DetectedText.split(' ');
+          const dob = firstSurnameAndBirthArray.pop();
+          const firstSurname = firstSurnameAndBirthArray.join(' ');
+          const secondSurnameAndSexArray = secondSurnameAndSexComponent.DetectedText.split(' ');
+          const sex = secondSurnameAndSexArray.pop();
+          secondSurnameAndSexArray.pop();
+          const secondSurname = secondSurnameAndSexArray.join(' ');
+          const name = nameComponent.DetectedText;
+
+          console.log(`Name: ${name}`)
+          console.log(`First Surname: ${firstSurname}`);
+          console.log(`Second Surname: ${secondSurname}`);
+          console.log(`Sex: ${sex}`);
+          console.log(`DOB: ${dob}`);
         }
         else if(idType == "DRIVER") {
           console.log("Found driver's licence.");
