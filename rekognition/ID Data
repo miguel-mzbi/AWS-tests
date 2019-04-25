@@ -1,0 +1,49 @@
+
+BoundingBox (From left to right, from bottom to top)
+Left: 1025
+Right: 5090
+Top: 3115
+Bottom: 530
+
+ID Size
+W: 4065
+H: 2585
+
+Measurmenets from bounding box of id
+
+firstSurname: 
+left: 1400
+top: 800
+
+secondSurname: 
+left: 1400
+top: 915
+
+name: 
+left: 1400
+top: 1048
+
+street & number: 
+left: 1400
+top: 1315
+
+municipality & cp: 
+left: 1400
+top: 1435
+
+district & state: 
+left: 1400
+top: 1565
+
+curp:
+left: 1633
+top: 1900
+
+DOB:
+left: 3420
+top: 785
+
+sex:
+left: 3870
+top: 925
+

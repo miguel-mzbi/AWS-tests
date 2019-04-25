@@ -104,5 +104,6 @@ typings/
 !.vscode/extensions.json
 
 .env
+.~lock*
 rekognition/rekognition/*
 rekognition/input/*

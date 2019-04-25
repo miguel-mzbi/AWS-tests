@@ -12,14 +12,16 @@ const rekognition = new AWS.Rekognition({
 const selfie1 = 'selfie1.jpg';
 const selfie2 = 'selfie2.jpg';
 const passport = 'passport.jpg';
-const ineF = 'ineF.jpg';
-const ineR = 'ineR.jpg';
+const ineF1 = 'ineF1.jpg';
 const ineF2 = 'ineF2.jpg';
+const ineF3 = 'ineF3.jpg';
+const ineR = 'ineR.jpg';
 
 const selfie1_BM = fs.readFileSync(`./input/${selfie1}`);
 const selfie2_BM = fs.readFileSync(`./input/${selfie2}`);
-const ineF_BM = fs.readFileSync(`./input/${ineF}`);
+const ineF1_BM = fs.readFileSync(`./input/${ineF1}`);
 const ineF2_BM = fs.readFileSync(`./input/${ineF2}`);
+const ineF3_BM = fs.readFileSync(`./input/${ineF3}`);
 const ineR_BM = fs.readFileSync(`./input/${ineR}`);
 const passport_BM = fs.readFileSync(`./input/${passport}`);
 
@@ -27,19 +29,19 @@ const passport_BM = fs.readFileSync(`./input/${passport}`);
 const selfieBM = selfie1_BM;
 const identificationBM = ineF2_BM;
 // Build payloads. Payload can contain photo location in an S3 bucket.
-let selfieJSON = {
+const selfieJSON = {
   Image: {
     Bytes: Buffer.from(selfieBM)
   },
 }
 
-let identificationJSON = {
+const identificationJSON = {
   Image: {
     Bytes: Buffer.from(identificationBM)
   },
 }
 
-let comparisonJSON = {
+const comparisonJSON = {
   TargetImage: {
     Bytes: Buffer.from(identificationBM)
   },
@@ -47,14 +49,80 @@ let comparisonJSON = {
     Bytes: Buffer.from(selfieBM)
   }
 }
+// INE relative positions of elements
+const ineElements = {
+  firstSurname: {
+    left: 0.344657804,
+    top: 0.30816641
+  },
+  secondSurname: {
+    left: 0.344657804,
+    top: 0.352465331
+  },
+  name: {
+    left: 0.344657804,
+    top: 0.403697997
+  },
+  streetNumber: {
+    left: 0.344657804,
+    top: 0.506548536209553
+  },
+  municipalityZIP: {
+    left: 0.344657804,
+    top: 0.552773497688752
+  },
+  districtState: {
+    left: 0.344657804,
+    top: 0.602850539291217
+  },
+  curp: {
+    left: 0.40201871,
+    top: 0.731895223420647
+  },
+  dob: {
+    left: 0.841949778,
+    top: 0.302388289676425
+  },
+  sex: {
+    left: 0.952732644,
+    top: 0.356317411402157
+  },
+}
 
 checkImages();
+
+function insideBox(boundingBox, position, idSize) {
+  const topFromId = idSize.Height * position.top;
+  const leftFromId = idSize.Width * position.left;
+  const topFromImage = idSize.Top + topFromId;
+  const leftFromImage = idSize.Left + leftFromId;
+
+  if(boundingBox.Left <= leftFromImage && leftFromImage <= boundingBox.Left + boundingBox.Width
+    && boundingBox.Top <= topFromImage && topFromImage <= boundingBox.Top + boundingBox.Height) {
+    return true;
+  }
+  else {
+    return false;
+  }
+}
+
+async function detectVariable(textDetections, ineElement, idSize) {
+  let value;
+  await textDetections.some(text => {
+    const textBoundingBox = text.Geometry.BoundingBox;
+    if(insideBox(textBoundingBox, ineElement, idSize)) {
+      value = text.DetectedText;
+      return true;
+    }
+  });
+  return value;
+}
 
 async function checkImages() {
 
   let validSelfie = false;
   let validId = false;
-  let validFaceMatch = false;
+  let idSize;
 
   console.log("Checking if uploaded ID card photo contains an ID card or passport.");
   const checkId = rekognition.detectLabels(identificationJSON).promise();
@@ -67,6 +135,7 @@ async function checkImages() {
       }
       else if (label.Name == "Id Cards" && label.Confidence > 75) {
         console.log("Most likely an ID card.");
+        idSize = label.Instances[0].BoundingBox;
         return true;
       }
     })) {
@@ -108,7 +177,6 @@ async function checkImages() {
         }
       })) {
         console.log("Faces matched.");
-        validFaceMatch = true;
       }
       else {
         console.log("No match detected above 75%");
@@ -127,52 +195,59 @@ async function checkImages() {
           idType = "INE";
           return true;
         }
-        else if(stringSimilarity.compareTwoStrings(text.DetectedText.toLowerCase(), 'secretaria de movilidad') >= 0.8) {
-          idType = "DRIVER";
-          return true;
-        }
-        else if(stringSimilarity.compareTwoStrings(text.DetectedText.toLowerCase(), 'pasaporte') >= 0.8) {
-          idType = "PASSPORT";
-          return true;
-        }
       })) {
         if(idType == "INE") {
           console.log("Found INE.");
-          const nameHeaderComponent = textDetections.find(text => {
-            return stringSimilarity.compareTwoStrings(text.DetectedText.toLowerCase(), 'nombre') >= 0.8
-          })
-          const firstSurnameAndBirthID = nameHeaderComponent.ParentId+1;
-          const secondSurnameAndSexID = nameHeaderComponent.ParentId+2;
-          const nameID = nameHeaderComponent.ParentId+4;
 
-          const firstSurnameAndBirthComponent = textDetections[firstSurnameAndBirthID];
-          const secondSurnameAndSexComponent = textDetections[secondSurnameAndSexID];
-          const nameComponent = textDetections[nameID];
-
-          const firstSurnameAndBirthArray = firstSurnameAndBirthComponent.DetectedText.split(' ');
-          const dob = firstSurnameAndBirthArray.pop();
-          const firstSurname = firstSurnameAndBirthArray.join(' ');
-          const secondSurnameAndSexArray = secondSurnameAndSexComponent.DetectedText.split(' ');
-          const sex = secondSurnameAndSexArray.pop();
-          secondSurnameAndSexArray.pop();
-          const secondSurname = secondSurnameAndSexArray.join(' ');
-          const name = nameComponent.DetectedText;
-
-          console.log(`Name: ${name}`)
-          console.log(`First Surname: ${firstSurname}`);
-          console.log(`Second Surname: ${secondSurname}`);
-          console.log(`Sex: ${sex}`);
-          console.log(`DOB: ${dob}`);
-        }
-        else if(idType == "DRIVER") {
-          console.log("Found driver's licence.");
-        }
-        else if(idType == "PASSPORT") {
-          console.log("Found passport.");
+          detectVariable(textDetections, ineElements.name, idSize).then(field => console.log(`Name: ${field}`));
+          detectVariable(textDetections, ineElements.firstSurname, idSize).then(field => console.log(`First surname: ${field}`));
+          detectVariable(textDetections, ineElements.secondSurname, idSize).then(field => {
+            if (typeof field === 'undefined') {
+              console.log(`Second surname: ${field}`)
+              return;
+            }
+            const fieldArray = field.split(' ');
+            if(fieldArray.length > 1) {
+              console.log(`Second surname: ${fieldArray[0]}`)
+            }
+            else {
+              console.log(`Second surname: ${field}`)
+            }
+          });
+          detectVariable(textDetections, ineElements.streetNumber, idSize).then(field => console.log(`Street & Number: ${field}`));
+          detectVariable(textDetections, ineElements.municipalityZIP, idSize).then(field => console.log(`Municipality & ZIP: ${field}`));
+          detectVariable(textDetections, ineElements.districtState, idSize).then(field => console.log(`District & State: ${field}`));
+          detectVariable(textDetections, ineElements.curp, idSize).then(field => {
+            if (typeof field === 'undefined') {
+              console.log(`CURP: ${field}`)
+              return;
+            }
+            const fieldArray = field.split(' ');
+            if(fieldArray.length > 1) {
+              console.log(`CURP: ${fieldArray[0]}`)
+            }
+            else {
+              console.log(`CURP: ${field}`)
+            }
+          });
+          detectVariable(textDetections, ineElements.dob, idSize).then(field => console.log(`DOB: ${field}`));
+          detectVariable(textDetections, ineElements.sex, idSize).then(field => {
+            if (typeof field === 'undefined') {
+              console.log(`Sex: ${field}`)
+              return;
+            }
+            const fieldArray = field.split(' ');
+            if(fieldArray.length > 1) {
+              console.log(`Sex: ${fieldArray.pop()}`)
+            }
+            else {
+              console.log(`Sex: ${field}`)
+            }
+          });
         }
       }
       else {
-        console.log("invalid ID card.");
+        console.log("Invalid ID card.");
       }
     });
   }
