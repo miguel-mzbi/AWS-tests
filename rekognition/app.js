@@ -14,7 +14,7 @@ const selfie2 = 'selfie2.jpg';
 const passport = 'passport.jpg';
 const ineF1 = 'ineF1.jpg';
 const ineF2 = 'ineF2.jpg';
-const ineF3 = 'ineF3.jpg';
+const ineF3 = 'ineF4.jpg';
 const ineR = 'ineR.jpg';
 
 const selfie1_BM = fs.readFileSync(`./input/${selfie1}`);
@@ -50,44 +50,7 @@ const comparisonJSON = {
   }
 }
 // INE relative positions of elements
-const ineElements = {
-  firstSurname: {
-    left: 0.344657804,
-    top: 0.30816641
-  },
-  secondSurname: {
-    left: 0.344657804,
-    top: 0.352465331
-  },
-  name: {
-    left: 0.344657804,
-    top: 0.403697997
-  },
-  streetNumber: {
-    left: 0.344657804,
-    top: 0.506548536209553
-  },
-  municipalityZIP: {
-    left: 0.344657804,
-    top: 0.552773497688752
-  },
-  districtState: {
-    left: 0.344657804,
-    top: 0.602850539291217
-  },
-  curp: {
-    left: 0.40201871,
-    top: 0.731895223420647
-  },
-  dob: {
-    left: 0.841949778,
-    top: 0.302388289676425
-  },
-  sex: {
-    left: 0.952732644,
-    top: 0.356317411402157
-  },
-}
+const ineElements = require("./ineElementsAVG.json");
 
 checkImages();
 
@@ -216,7 +179,7 @@ async function checkImages() {
           });
           detectVariable(textDetections, ineElements.streetNumber, idSize).then(field => console.log(`Street & Number: ${field}`));
           detectVariable(textDetections, ineElements.municipalityZIP, idSize).then(field => console.log(`Municipality & ZIP: ${field}`));
-          detectVariable(textDetections, ineElements.districtState, idSize).then(field => console.log(`District & State: ${field}`));
+          detectVariable(textDetections, ineElements.cityState, idSize).then(field => console.log(`City & State: ${field}`));
           detectVariable(textDetections, ineElements.curp, idSize).then(field => {
             if (typeof field === 'undefined') {
               console.log(`CURP: ${field}`)
